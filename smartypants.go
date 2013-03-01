@@ -1,6 +1,22 @@
-// Extracted and modified from the Blackfriday Markdown Processor
-// Available at http://github.com/russross/blackfriday
+// Package smartypants translates basic ASCII punctuation into HTML entities
+// for fancy Unicode punctuation according to some simple contextual rules:
 //
+//  Input           Meaning        Output
+//
+//  "hello world"   “hello world”  &ldquo;hello world&rdquo;
+//  'hello world'   ‘hello world’  &lsquo;hello world&rsquo;
+//  hello-world     hello–world    hello-world (no change)
+//  hello - world   hello – world  hello &ndash; world
+//  hello--world    hello—world    hello&mdash;world
+//  hello -- world  hello — world  hello &mdash; world
+//  ...             …              &hellip;
+//  1/2 1/4 3/4     ½ ¼ ¾          &frac12; &frac14; &frac34;
+//  (c) (r) (tm)    © ® ™          &copy; &reg; &trade;
+//
+// See http://daringfireball.net/projects/smartypants/.
+//
+// Extracted and modified from the Blackfriday Markdown processor
+// available at http://github.com/russross/blackfriday.
 // Copyright © 2011 Russ Ross <russ@russross.com>.
 // Distributed under the Simplified BSD License.
 // See file License for details.
@@ -12,8 +28,8 @@ import (
 )
 
 const (
-	LatexDashes = 1 << iota
-	Fractions
+	LatexDashes = 1 << iota // translate -, --, and --- according to LaTeX rules
+	Fractions               // translate arbitrary fractions with <sup> and <sub>
 )
 
 type smartypantsData struct {
@@ -377,10 +393,14 @@ type writer struct {
 	d smartypantsData
 }
 
-func NewEducator(w io.Writer, flags int) io.Writer {
+// New creates a smartypants filter. When data is written, the filter
+// translates punctuation, then writes the translated data to w.
+//
+// Parameter flag selects alternate behavior (bitwise OR of LatexDashes etc.).
+func New(w io.Writer, flag int) io.Writer {
 	return &writer{
 		w: w,
-		s: smartypants(flags),
+		s: smartypants(flag),
 	}
 }
 

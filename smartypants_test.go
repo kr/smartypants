@@ -8,20 +8,74 @@ import (
 var ts = []struct {
 	s string
 	w string
+	f int
 }{
 	{
-		`hello, I "just" don't -- know`,
-		`hello, I &ldquo;just&rdquo; don&rsquo;t &mdash; know`,
+		s: `"word"`,
+		w: `&ldquo;word&rdquo;`,
+	},
+	{
+		s: `'word'`,
+		w: `&lsquo;word&rsquo;`,
+	},
+	{
+		s: `don't`,
+		w: `don&rsquo;t`,
+	},
+	{
+		s: `...`,
+		w: `&hellip;`,
+	},
+	{
+		s: `a-b`,
+		w: `a-b`,
+	},
+	{
+		s: `a - b`,
+		w: `a &ndash; b`,
+	},
+	{
+		s: `a--b`,
+		w: `a&mdash;b`,
+	},
+	{
+		s: `a -- b`,
+		w: `a &mdash; b`,
+	},
+	{
+		s: `a -- b`,
+		w: `a &ndash; b`,
+		f: LatexDashes,
+	},
+	{
+		s: `a --- b`,
+		w: `a &mdash; b`,
+		f: LatexDashes,
+	},
+	{
+		s: `(c)`,
+		w: `&copy;`,
+	},
+	{
+		s: `(r)`,
+		w: `&reg;`,
+	},
+	{
+		s: `(tm)`,
+		w: `&trade;`,
+	},
+	{
+		s: `1/4`,
+		w: `&frac14;`,
 	},
 }
 
 func TestSmartypants(t *testing.T) {
 	for i := range ts {
 		b := new(bytes.Buffer)
-		w := NewEducator(b, 0)
-		w.Write([]byte(ts[i].s))
+		New(b, ts[i].f).Write([]byte(ts[i].s))
 		if g := b.String(); g != ts[i].w {
-			t.Errorf("%q != %q", g, ts[i].w)
+			t.Errorf("%q => %q != %q", ts[i].s, g, ts[i].w)
 		}
 	}
 }
