@@ -12,19 +12,19 @@ var ts = []struct {
 }{
 	{
 		s: `"word"`,
-		w: `&ldquo;word&rdquo;`,
+		w: `“word”`,
 	},
 	{
 		s: `'word'`,
-		w: `&lsquo;word&rsquo;`,
+		w: `‘word’`,
 	},
 	{
 		s: `don't`,
-		w: `don&rsquo;t`,
+		w: `don’t`,
 	},
 	{
 		s: `...`,
-		w: `&hellip;`,
+		w: `…`,
 	},
 	{
 		s: `a-b`,
@@ -32,41 +32,41 @@ var ts = []struct {
 	},
 	{
 		s: `a - b`,
-		w: `a &ndash; b`,
+		w: `a – b`,
 	},
 	{
 		s: `a--b`,
-		w: `a&mdash;b`,
+		w: `a—b`,
 	},
 	{
 		s: `a -- b`,
-		w: `a &mdash; b`,
+		w: `a — b`,
 	},
 	{
 		s: `a -- b`,
-		w: `a &ndash; b`,
+		w: `a – b`,
 		f: LatexDashes,
 	},
 	{
 		s: `a --- b`,
-		w: `a &mdash; b`,
+		w: `a — b`,
 		f: LatexDashes,
 	},
 	{
 		s: `(c)`,
-		w: `&copy;`,
+		w: `©`,
 	},
 	{
 		s: `(r)`,
-		w: `&reg;`,
+		w: `®`,
 	},
 	{
 		s: `(tm)`,
-		w: `&trade;`,
+		w: `™`,
 	},
 	{
 		s: `1/4`,
-		w: `&frac14;`,
+		w: `¼`,
 	},
 }
 
@@ -75,7 +75,7 @@ func TestSmartypants(t *testing.T) {
 		b := new(bytes.Buffer)
 		New(b, ts[i].f).Write([]byte(ts[i].s))
 		if g := b.String(); g != ts[i].w {
-			t.Errorf("%q => %q != %q", ts[i].s, g, ts[i].w)
+			t.Errorf("%#q => %#q != %#q", ts[i].s, g, ts[i].w)
 		}
 	}
 }

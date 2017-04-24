@@ -1,17 +1,17 @@
-// Package smartypants translates basic ASCII punctuation into HTML entities
-// for fancy Unicode punctuation according to some simple contextual rules:
+// Package smartypants translates basic ASCII punctuation into
+// fancy Unicode punctuation according to some simple contextual rules:
 //
-//  Input           Meaning        Output
+//  Input           Output         Remarks
 //
-//  "hello world"   “hello world”  &ldquo;hello world&rdquo;
-//  'hello world'   ‘hello world’  &lsquo;hello world&rsquo;
-//  hello-world     hello–world    hello-world (no change)
-//  hello - world   hello – world  hello &ndash; world
-//  hello--world    hello—world    hello&mdash;world
-//  hello -- world  hello — world  hello &mdash; world
-//  ...             …              &hellip;
-//  1/2 1/4 3/4     ½ ¼ ¾          &frac12; &frac14; &frac34;
-//  (c) (r) (tm)    © ® ™          &copy; &reg; &trade;
+//  "hello world"   “hello world”  Left and right double quote
+//  'hello world'   ‘hello world’  Left and right single quote
+//  hello-world     hello–world    No change
+//  hello - world   hello – world  N-dash
+//  hello--world    hello—world    M-dash
+//  hello -- world  hello — world  M-dash
+//  ...             …              Horizontal ellipsis
+//  1/2 1/4 3/4     ½ ¼ ¾
+//  (c) (r) (tm)    © ® ™
 //
 // See http://daringfireball.net/projects/smartypants/.
 //
@@ -109,15 +109,20 @@ func smartQuoteHelper(w io.Writer, prev, next, quote byte, isOpen *bool) bool {
 		*isOpen = false
 	}
 
-	w.Write([]byte{'&'})
-	if *isOpen {
-		w.Write([]byte{'l'})
-	} else {
-		w.Write([]byte{'r'})
-	}
-	w.Write([]byte{quote})
-	io.WriteString(w, "quo;")
+	io.WriteString(w, quotes[quottyp{quote, *isOpen}])
 	return true
+}
+
+type quottyp struct {
+	num  byte
+	open bool
+}
+
+var quotes = map[quottyp]string{
+	quottyp{'s', true}:  "‘",
+	quottyp{'d', true}:  "“",
+	quottyp{'s', false}: "’",
+	quottyp{'d', false}: "”",
 }
 
 func smartSingleQuote(w io.Writer, smrt *smartypantsData, previousChar byte, text []byte) int {
@@ -135,7 +140,7 @@ func smartSingleQuote(w io.Writer, smrt *smartypantsData, previousChar byte, tex
 		}
 
 		if (t1 == 's' || t1 == 't' || t1 == 'm' || t1 == 'd') && (len(text) < 3 || wordBoundary(text[2])) {
-			io.WriteString(w, "&rsquo;")
+			io.WriteString(w, "’")
 			return 0
 		}
 
@@ -144,7 +149,7 @@ func smartSingleQuote(w io.Writer, smrt *smartypantsData, previousChar byte, tex
 
 			if ((t1 == 'r' && t2 == 'e') || (t1 == 'l' && t2 == 'l') || (t1 == 'v' && t2 == 'e')) &&
 				(len(text) < 4 || wordBoundary(text[3])) {
-				io.WriteString(w, "&rsquo;")
+				io.WriteString(w, "’")
 				return 0
 			}
 		}
@@ -168,17 +173,17 @@ func smartParens(w io.Writer, smrt *smartypantsData, previousChar byte, text []b
 		t2 := tolower(text[2])
 
 		if t1 == 'c' && t2 == ')' {
-			io.WriteString(w, "&copy;")
+			io.WriteString(w, "©")
 			return 2
 		}
 
 		if t1 == 'r' && t2 == ')' {
-			io.WriteString(w, "&reg;")
+			io.WriteString(w, "®")
 			return 2
 		}
 
 		if len(text) >= 4 && t1 == 't' && t2 == 'm' && text[3] == ')' {
-			io.WriteString(w, "&trade;")
+			io.WriteString(w, "™")
 			return 3
 		}
 	}
@@ -190,12 +195,12 @@ func smartParens(w io.Writer, smrt *smartypantsData, previousChar byte, text []b
 func smartDash(w io.Writer, smrt *smartypantsData, previousChar byte, text []byte) int {
 	if len(text) >= 2 {
 		if text[1] == '-' {
-			io.WriteString(w, "&mdash;")
+			io.WriteString(w, "—")
 			return 1
 		}
 
 		if wordBoundary(previousChar) && wordBoundary(text[1]) {
-			io.WriteString(w, "&ndash;")
+			io.WriteString(w, "–")
 			return 0
 		}
 	}
@@ -206,11 +211,11 @@ func smartDash(w io.Writer, smrt *smartypantsData, previousChar byte, text []byt
 
 func smartDashLatex(w io.Writer, smrt *smartypantsData, previousChar byte, text []byte) int {
 	if len(text) >= 3 && text[1] == '-' && text[2] == '-' {
-		io.WriteString(w, "&mdash;")
+		io.WriteString(w, "—")
 		return 2
 	}
 	if len(text) >= 2 && text[1] == '-' {
-		io.WriteString(w, "&ndash;")
+		io.WriteString(w, "–")
 		return 1
 	}
 
@@ -239,12 +244,12 @@ func smartAmp(w io.Writer, smrt *smartypantsData, previousChar byte, text []byte
 
 func smartPeriod(w io.Writer, smrt *smartypantsData, previousChar byte, text []byte) int {
 	if len(text) >= 3 && text[1] == '.' && text[2] == '.' {
-		io.WriteString(w, "&hellip;")
+		io.WriteString(w, "…")
 		return 2
 	}
 
 	if len(text) >= 5 && text[1] == ' ' && text[2] == '.' && text[3] == ' ' && text[4] == '.' {
-		io.WriteString(w, "&hellip;")
+		io.WriteString(w, "…")
 		return 4
 	}
 
@@ -311,21 +316,21 @@ func smartNumber(w io.Writer, smrt *smartypantsData, previousChar byte, text []b
 	if wordBoundary(previousChar) && len(text) >= 3 {
 		if text[0] == '1' && text[1] == '/' && text[2] == '2' {
 			if len(text) < 4 || wordBoundary(text[3]) {
-				io.WriteString(w, "&frac12;")
+				io.WriteString(w, "½")
 				return 2
 			}
 		}
 
 		if text[0] == '1' && text[1] == '/' && text[2] == '4' {
 			if len(text) < 4 || wordBoundary(text[3]) || (len(text) >= 5 && tolower(text[3]) == 't' && tolower(text[4]) == 'h') {
-				io.WriteString(w, "&frac14;")
+				io.WriteString(w, "¼")
 				return 2
 			}
 		}
 
 		if text[0] == '3' && text[1] == '/' && text[2] == '4' {
 			if len(text) < 4 || wordBoundary(text[3]) || (len(text) >= 6 && tolower(text[3]) == 't' && tolower(text[4]) == 'h' && tolower(text[5]) == 's') {
-				io.WriteString(w, "&frac34;")
+				io.WriteString(w, "¾")
 				return 2
 			}
 		}
